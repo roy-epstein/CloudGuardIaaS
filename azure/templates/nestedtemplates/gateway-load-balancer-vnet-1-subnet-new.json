@@ -1,0 +1,164 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the virtual network"
+      },
+      "defaultValue": "vnet"
+    },
+    "virtualNetworkAddressPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The address prefix of the virtual network"
+      }
+    },
+    "Subnet1Name": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the 1st subnet"
+      },
+      "defaultValue": "Frontend"
+    },
+    "Subnet1Prefix": {
+      "type": "string",
+      "metadata": {
+        "description": "The address prefix of the 1st subnet"
+      },
+      "defaultValue": "10.0.1.0/24"
+    },
+    "vmName": {
+      "type": "string"
+    },
+    "deployNsg": {
+      "type": "bool",
+      "defaultValue": "false"
+    },
+    "deployRouteTable": {
+      "type": "bool",
+      "defaultValue": "false"
+    },
+    "Check_PointTags": {
+      "type": "object",
+      "defaultValue": {
+        "provider": "30DE18BC-F9F6-4F22-9D30-54B8E74CFD5F"
+      }
+    }
+  },
+  "variables": {
+    "localSubnetRoute": [
+      {
+        "name": "Local-Subnet",
+        "properties": {
+          "addressPrefix": "[parameters('subnet1Prefix')]",
+          "nextHopType": "VnetLocal"
+        }
+      },
+      {
+        "name": "To-VNet",
+        "properties": {
+          "addressPrefix": "[parameters('virtualNetworkAddressPrefix')]",
+          "nextHopType": "None"
+        }
+      }
+    ],
+    "routesArray": "[variables('localSubnetRoute')]",
+    "nsgName": "[concat(parameters('vmName'), '-nsg')]",
+    "nsgProperties": {
+      "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+    },
+    "routeTableProperties": {
+      "id": "[resourceId('Microsoft.Network/routeTables', parameters('subnet1Name'))]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/routeTables",
+      "condition": "[parameters('deployRouteTable')]",
+      "apiVersion": "2020-06-01",
+      "location": "[parameters('location')]",
+      "name": "[parameters('subnet1Name')]",
+      "properties": {
+        "routes": "[variables('routesArray')]"
+      },
+      "tags": {
+        "provider": "[toUpper(parameters('Check_PointTags').provider)]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2020-06-01",
+      "location": "[parameters('location')]",
+      "name": "[parameters('virtualNetworkName')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/routeTables', parameters('subnet1Name'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('virtualNetworkAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[parameters('subnet1Prefix')]",
+              "routeTable": "[if(parameters('deployRouteTable'), variables('routeTableProperties'), json('null'))]"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "provider": "[toUpper(parameters('Check_PointTags').provider)]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "condition": "[parameters('deployNsg')]",
+      "apiVersion": "2020-06-01",
+      "location": "[parameters('location')]",
+      "name": "[variables('nsgName')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "AllowAllInBound",
+            "properties": {
+              "description": "Allow all inbound connections",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": "100",
+              "direction": "Inbound"
+            }
+          }
+        ]
+      },
+      "tags": {
+        "provider": "[toUpper(parameters('Check_PointTags').provider)]"
+      }
+    }
+  ],
+  "outputs": {
+    "vnetId": {
+      "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+      "type": "string"
+    },
+    "vnetAddressPrefix": {
+      "value": "[parameters('virtualNetworkAddressPrefix')]",
+      "type": "string"
+    },
+    "nsgProperties": {
+      "value": "[variables('nsgProperties')]",
+      "type": "object"
+    }
+  }
+}
