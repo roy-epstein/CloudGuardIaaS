@@ -263,7 +263,7 @@
     },
     "sourceImageVhdUri": {
       "type": "string",
-      "defaultValue": "https://danielmirblob1.blob.core.windows.net/danielmirblob/Check-Point-Security-Gateway-Blink-BYOL-R81-392.239-auto.vhd",
+      "defaultValue": "https://danielmirblob1.blob.core.windows.net/danielmirblob/Check-Point-Security-Gateway-Blink-BYOL-R81-392.240-auto.vhd",
       "metadata": {
         "description": "The URI of the blob containing the development image"
       }
